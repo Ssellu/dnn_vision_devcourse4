@@ -2,6 +2,10 @@
 .huskyrc.json
 out
 log.log
+
+output/*
+mnist_dataset
+
 **/node_modules
 *.pyc
 *.vsix
