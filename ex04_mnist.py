@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -12,6 +13,7 @@ import torch.optim as optim
 
 from model.models import *
 from loss.loss import *
+from util.tools import *
 
 
 def parse_args():
@@ -112,8 +114,8 @@ def main():
                 img = batch[0]
                 gt = batch[1]
 
-                # img = img.to(device)
-                # gt = gt.to(device)
+                img = img.to(device)
+                gt = gt.to(device)
                 out = model(img)
                 # print('Trained Image : {}'.format(out))
 
@@ -139,9 +141,67 @@ def main():
             scheduler.step()
             print('-> {} epoch mean loss : {}'.format(e, mean_loss))
 
+            Path("{}/model_epoch".format(args.output_dir)
+                 ).mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(),
-                       '{}/model_epoch/{}.pt'.format(args.output_dir, e))
+                       '{}/model_epoch{}.pt'.format(args.output_dir, e))
         print('Training has ended.')
+    elif args.mode == 'eval':
+
+        model = _model(batch=1, n_classes=10, in_channel=1,
+                       in_width=32, in_height=32)  # NOTE Batch size is 1 in order to it is eval mode
+
+        # Load trained model
+        checkpoint = torch.load(args.checkpoint)
+        model.load_state_dict(checkpoint)
+        model.to(device=device)
+
+        # Evaluate loaded dataset
+        model.eval()
+
+        acc = 0
+        num_eval = 0
+
+        for i, batch in enumerate(eval_loader):
+            img = batch[0]
+            gt = batch[1]
+
+            img = img.to(device)
+
+            out = model(img)
+            if out is None:
+                continue
+            out = out.cpu()
+            if out == gt:
+                acc += 1
+            num_eval += 1
+
+        print("Evaluation Score {}/{}".format(acc, num_eval))
+    elif args.mode == 'test':
+        model = _model(batch=1, n_classes=10, in_channel=1,
+                       in_width=32, in_height=32)  # NOTE Batch size is 1 in order to it is eval mode
+
+        # Load trained model
+        checkpoint = torch.load(args.checkpoint)
+        model.load_state_dict(checkpoint)
+        model.to(device=device)
+
+        # Evaluate loaded dataset
+        model.eval()
+
+        for i, batch in enumerate(test_loader):
+            img = batch[0]
+            img = img.to(device)
+
+            out = model(img)
+            if out is None:
+                continue
+            out = out.cpu()
+
+            print(out)
+
+            # Show image with PyPlot
+            show_img(img.cpu().numpy(), str(out.item()))
 
 
 if __name__ == '__main__':

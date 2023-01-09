@@ -1,0 +1,4 @@
+python ex04_mnist.py --mode train --download 1 --output_dir './output'
+python ex04_mnist.py --mode eval --download 1 --output_dir ./output
+
+python ex04_mnist.py --mode eval --download 1 --output_dir ./output --checkpoint ./output/model_epoch0.pt
