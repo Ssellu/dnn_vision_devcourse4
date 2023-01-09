@@ -46,3 +46,43 @@ class MyConv:
                                     a_i += self.stride
                             a_j += self.stride 
         return C
+
+    # IM2COL. Change n-dim input to 2-dim matrix
+    def im2col(self, A):
+        # Output
+        mat = np.zeros((self.in_c * self.k_h * self.k_w, self.out_w * self.out_h), dtype=np.float32)
+
+        mat_j = 0
+        mat_i = 0
+        
+        for c in range(self.in_c):
+            for kh in range(self.k_h):
+                for kw in range(self.k_w):
+                    in_j = kh * self.dilation - self.pad
+                    for oh in range(self.out_h):
+                        if not self.check_range(in_j, self.in_h):
+                            for ow in range(self.out_w):
+                                mat[mat_j, mat_i] = 0
+                                mat_i += 1
+                        else:
+                            in_i = kw * self.dilation - self.pad
+                            for ow in range(self.out_w):
+                                if not self.check_range(in_i, self.in_w):
+                                    mat[mat_j, mat_i] = 0
+                                    mat_i += 1
+                                else:
+                                    mat[mat_j, mat_i] = A[0, c, in_j, in_i]
+                                    mat_i += 1
+                                in_i += self.stride
+                        in_j += self.stride
+                    mat_i = 0
+                    mat_j += 1
+        return mat
+
+    # GEMM. 2D matrix multiplication
+    def gemm(self, A, B:np.ndarray):
+        a_mat = self.im2col(A)
+        b_mat = B.reshape(B.shape[0],-1)
+        c_mat = np.matmul(b_mat, a_mat)
+        c = c_mat.reshape([self.batch, self.out_c, self.out_h, self.out_w])
+        return c
